@@ -1,0 +1,2 @@
+case_id,path,expected_status
+health_ok,/health,200

@@ -1,0 +1,10 @@
+scenario: demo_health
+test_type: baseline
+host: https://example.com
+users: 1
+spawn_rate: 1
+run_time: 10s
+thresholds:
+  p95_ms: 1000
+  error_rate: 0.01
+  fail_on_threshold: false

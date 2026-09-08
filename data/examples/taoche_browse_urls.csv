@@ -1,0 +1,8 @@
+page_type,url,weight,label
+home,/,10,首页
+list,/cars,20,全部列表
+brand,/cars?brand=demo,10,品牌筛选
+filter,/cars?price=10_20,20,多条件筛选
+detail,/detail/100001,20,详情页
+param,/paramConfig/100001,10,参数配置
+city,/cities,10,城市切换

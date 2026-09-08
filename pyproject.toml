@@ -1,0 +1,27 @@
+[project]
+name = "test-locust-platform"
+version = "0.1.0"
+description = "Python + Locust 通用的性能测试框架"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = [
+    "locust>=2.31.0",
+    "openai>=1.40.0",
+    "pydantic>=2.8.0",
+    "pyyaml>=6.0.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2.0",
+    "ruff>=0.5.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
