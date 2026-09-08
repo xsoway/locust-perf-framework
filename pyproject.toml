@@ -1,5 +1,5 @@
 [project]
-name = "test-locust-platform"
+name = "locust-perf-framework"
 version = "0.1.0"
 description = "Python + Locust 通用的性能测试框架"
 readme = "README.md"

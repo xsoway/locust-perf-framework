@@ -196,7 +196,7 @@ sequenceDiagram
 项目目录按性能测试生命周期拆分：
 
 ```text
-test-locust-platform/
+locust-perf-framework/
 ├── agents/          # 规划、脚本开发、报告分析 Agent 职责
 ├── config/          # 环境配置、压测参数、AI 客户端
 ├── data/            # 测试数据

@@ -1,4 +1,4 @@
-# test-locust-platform
+# locust-perf-framework
 
 > 基于 Python + Locust 的通用性能测试框架，沉淀「压测方案 → 脚本 → 数据 → 执行记录 → 中文分析报告 → LLM 辅助总结」的可复用流程。
 

@@ -1,6 +1,6 @@
 # 参与贡献指南
 
-感谢你愿意为 **test-locust-platform** 贡献代码。请先阅读 [AGENTS.md](AGENTS.md)
+感谢你愿意为 **locust-perf-framework** 贡献代码。请先阅读 [AGENTS.md](AGENTS.md)
 中的命名、目录边界、不覆盖与开发规范。本框架的准则是：**框架不承载具体业务规则，
 脚本只描述行为，数据只从 data 读取，报告必须给出可决策的结论。**
 

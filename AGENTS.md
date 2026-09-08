@@ -1,4 +1,4 @@
-# AGENTS.md · test-locust-platform Agent 规则入口
+# AGENTS.md · locust-perf-framework Agent 规则入口
 
 <!-- code_project: parent-agents-required -->
 
