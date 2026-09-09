@@ -39,7 +39,7 @@ def test_check_data_file_detects_real_hex_appkey(tmp_path: Path) -> None:
     """数据文件中的 16 位以上十六进制 appKey 应被 warning。"""
 
     data_file = tmp_path / "real.json"
-    data_file.write_text('{"headers": {"appKey": "8e45495caf7dcc6e837a0c75c40bf043"}}', encoding="utf-8")
+    data_file.write_text('{"headers": {"appKey": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"}}', encoding="utf-8")
 
     issues = check_data_file(str(data_file))
 
