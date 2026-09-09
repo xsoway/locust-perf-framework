@@ -136,3 +136,26 @@ uv run python -m tools.preflight \
 - `docs/performance_known_issues.md`：常见性能瓶颈模式库（慢 SQL、连接池耗尽、Redis 热点、GC 风暴、线程池耗尽、压测机自身瓶颈等），供定位与报告分析参考。
 - 报告分析 Agent（`agents/report_analysis_agent.md`）遵循"全链路排查军师"纪律：**证据链、反证法、药方 + 复验方案**。
 - 调优后请用**相同压力复测**验证（可复用同一批次的并发/时长/数据），避免"没验证就认为修好了"。
+
+## 多源监控数据接入（可选）
+
+瓶颈往往是**多层联动**的。除 Locust 客户端侧指标外，可接入服务器资源与慢查询数据，
+在报告中叠加"资源与吞吐关联曲线"，作为交叉验证的**第二层证据**。
+
+支持两类输入（均不触网，仅本地解析）：
+
+- Prometheus 资源时序 CSV：列含 `timestamp(time/t)`、`cpu(cpu_usage)`、`memory(mem_usage)`、`rps(qps/tps)` 等；
+- 慢查询 JSONL：每行 `{"timestamp": "2026-06-24T17:00:00", "duration_ms": 1200, "query": "SELECT ..."}`。
+
+```bash
+uv run python -m tools.report_builder \
+  --scenario demo_health --test-type stress \
+  --stats-csv reports/raw/demo_health/<ts>/stats_stats.csv \
+  --overview "带监控关联的压测报告" --plan "阶梯加压" \
+  --monitoring-csv /path/to/prometheus_metrics.csv \
+  --slow-query-file /path/to/slow_queries.jsonl
+```
+
+报告会新增"资源与吞吐关联分析"板块（资源曲线 + 慢查询 Top 5）。也可用
+`tools/monitoring_parser.py` 的 `parse_prometheus_csv` / `parse_slow_query_jsonl` /
+`align_timeline` 自行解析后传给 `build_report(monitoring_series=...)`。

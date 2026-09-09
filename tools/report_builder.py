@@ -1521,6 +1521,7 @@ def render_html(
     image_summary: dict[str, object] | None = None,
     request_log_stats: RequestLogStats | None = None,
     baseline_rows: list[LocustStatsRow] | None = None,
+    monitoring_series=None,  # noqa: ANN001
 ) -> str:
     """渲染 HTML 报告。"""
 
@@ -1533,6 +1534,11 @@ def render_html(
     status, badge_class, status_note = _status_badge(summary)
     callout_class = _callout_class(badge_class)
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    monitoring_html = (
+        _monitoring_section(monitoring_series)
+        if monitoring_series is not None and not monitoring_series.is_empty
+        else ""
+    )
     metric_explanations = "\n".join(
         f"<li><span class=\"metric-name\">{_escape(name)}</span>：{_escape(desc)}</li>"
         for name, desc in _metric_explanations(context)
@@ -1869,6 +1875,8 @@ def render_html(
     {_optimization_table(rows, failure_details)}
   </section>
 
+  {monitoring_html}
+
   <section class="section">
     <div class="section-kicker">14 · 历史对比</div>
     <h2>历史基线对比</h2>
@@ -1888,6 +1896,106 @@ def _focus_metrics_text(context: ReportContext) -> str:
     return "吞吐量、失败率、P95/P99、最大响应、最慢接口"
 
 
+def _monitoring_series_svg(series) -> str:  # noqa: ANN001
+    """把监控时序渲染成多线 SVG（CPU 与吞吐量双线关联）。
+
+    通过双坐标轴在同一时间轴上叠加展示资源（CPU%）与被测吞吐（RPS），
+    便于观察"压力增加时资源是否先触顶"这类关联。
+    """
+
+    width, height = 760, 220
+    pad_l, pad_r, pad_t, pad_b = 46, 16, 16, 26
+    plot_w = width - pad_l - pad_r
+    plot_h = height - pad_t - pad_b
+    xs = series.timestamps
+    cpus = series.cpu
+    rps = series.rps
+    lines: list[str] = []
+
+    lines.append(
+        _escape(
+            "（说明：本曲线将服务器资源指标与被测吞吐/RT 叠加到同一时间轴，"
+            "用于交叉验证瓶颈是否发生在资源层。数据来自外部监控导出。）"
+        )
+    )
+
+    if not xs:
+        return lines[0] if lines else ""
+
+    def _offset(vals: list[float]) -> list[float]:
+        vmin, vmax = min(vals, default=0.0), max(vals, default=1.0)
+        span = (vmax - vmin) or 1.0
+        tmin, tmax = xs[0], xs[-1]
+        tspan = (tmax - tmin) or 1.0
+        pts = []
+        for i, val in enumerate(vals):
+            sx = pad_l + (xs[i] - tmin) / tspan * plot_w
+            sy = pad_t + plot_h - (val - vmin) / span * plot_h
+            pts.append((sx, sy))
+        return pts
+
+    svg = [f'<svg viewBox="0 0 {width} {height}" width="100%" role="img" aria-label="资源与吞吐关联曲线">']
+    # 网格线
+    for i in range(0, 5):
+        y = pad_t + plot_h * i / 4
+        svg.append(
+            f'<line x1="{pad_l}" y1="{y:.1f}" x2="{width - pad_r}" y2="{y:.1f}" '
+            f'stroke="rgba(27,24,16,0.10)" stroke-width="1"/>'
+        )
+    if cpus and any(c for c in cpus):
+        cpu_pts = _offset([c for c in cpus])
+        svg.append(
+            '<polyline points="' + " ".join(f"{x:.1f},{y:.1f}" for x, y in cpu_pts)
+            + '" fill="none" stroke="var(--crit)" stroke-width="2"/>'
+        )
+    if rps and any(r for r in rps):
+        rps_pts = _offset([r for r in rps])
+        svg.append(
+            '<polyline points="' + " ".join(f"{x:.1f},{y:.1f}" for x, y in rps_pts)
+            + '" fill="none" stroke="var(--ok)" stroke-width="2"/>'
+        )
+    # 图例
+    legend = '<g class="mono" font-size="11" fill="var(--ink-soft)">'
+    if cpus and any(c for c in cpus):
+        legend += '<rect x="20" y="12" width="10" height="10" fill="var(--crit)"/><text x="36" y="21">CPU %</text>'
+    if rps and any(r for r in rps):
+        legend += '<rect x="120" y="12" width="10" height="10" fill="var(--ok)"/><text x="136" y="21">RPS / TPS</text>'
+    legend += "</g>"
+    svg.append(legend)
+    svg.append("</svg>")
+    return "\n" + "\n".join(svg) + "\n"
+
+
+def _monitoring_section(series) -> str:  # noqa: ANN001
+    """渲染"资源与吞吐关联 + 慢查询"监控板块。
+
+    当接入了服务器/DB 监控数据时展示；为空时返回空串（不插入板块）。
+    """
+
+    if series is None or series.is_empty:
+        return ""
+    parts: list[str] = []
+    parts.append(
+        '<section class="section"><div class="section-kicker">13.5 · 资源与慢查询关联（外部监控）</div>'
+        "<h2>资源与吞吐关联分析</h2>"
+    )
+    parts.append('<div class="chart-grid">')
+    parts.append(f'<div class="chart"><h3>资源与吞吐双轴曲线</h3>{_monitoring_series_svg(series)}</div>')
+    if series.slow_queries:
+        rows_html = "\n".join(
+            f"<tr><td class=\"mono\">{_escape(q.query)}</td>"
+            f"<td class=\"mono\">{_fmt_number(q.duration_ms)} ms</td></tr>"
+            for q in sorted(series.slow_queries, key=lambda x: x.duration_ms, reverse=True)[:5]
+        )
+        parts.append(
+            '<div class="chart"><h3>慢查询 Top 5</h3>'
+            '<table class="details-table"><thead><tr><th>慢 SQL</th><th>耗时</th></tr></thead>'
+            f"<tbody>{rows_html}</tbody></table></div>"
+        )
+    parts.append("</div></section>")
+    return "\n".join(parts)
+
+
 def build_report(
     context: ReportContext,
     stats_csv: Path,
@@ -1899,6 +2007,7 @@ def build_report(
     baseline_stats_csv: Path | None = None,
     enable_llm_analysis: bool = False,
     llm_client=None,  # noqa: ANN001
+    monitoring_series=None,  # noqa: ANN001
 ) -> Path:
     """生成 HTML 报告并返回输出路径。"""
 
@@ -1934,6 +2043,7 @@ def build_report(
         image_summary,
         request_log_stats,
         baseline_rows,
+        monitoring_series=monitoring_series,
     )
     paths.html_report.write_text(html_text, encoding="utf-8")
     logger.info("report build finished html_report=%s", paths.html_report)
@@ -1989,7 +2099,19 @@ def main() -> None:
     parser.add_argument("--request-log-file", default=None, type=Path)
     parser.add_argument("--baseline-stats-csv", default=None, type=Path)
     parser.add_argument("--enable-llm-analysis", action="store_true")
+    parser.add_argument("--monitoring-csv", default=None, type=Path, help="Prometheus 资源时序 CSV（可选）")
+    parser.add_argument("--slow-query-file", default=None, type=Path, help="慢查询 JSONL（可选）")
     args = parser.parse_args()
+
+    monitoring_series = None
+    if args.monitoring_csv and args.monitoring_csv.exists():
+        from tools.monitoring_parser import align_timeline, parse_prometheus_csv
+
+        monitoring_series = align_timeline(
+            parse_prometheus_csv(args.monitoring_csv),
+            args.slow_query_file,
+        )
+
     output = build_report(
         _build_context_from_args(args),
         args.stats_csv,
@@ -2000,6 +2122,7 @@ def main() -> None:
         request_log_file=args.request_log_file,
         baseline_stats_csv=args.baseline_stats_csv,
         enable_llm_analysis=args.enable_llm_analysis,
+        monitoring_series=monitoring_series,
     )
     print(output)
 

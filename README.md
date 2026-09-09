@@ -13,6 +13,7 @@
 - 🤖 **LLM 辅助分析（可选）**：经 `config/ai_apiclient.py`（OpenAI 兼容封装）为报告追加 AI 摘要，遵守"证据链 / 反证法 / 药方+复验"的排查纪律，密钥走环境变量。
 - 📈 **阶梯加压找拐点**：`tools/run_step_load.py` 逐级加压并自动判定 TPS 性能拐点与错误率击穿点，支持熔断。
 - 🔍 **瓶颈模式库**：`docs/performance_known_issues.md` 沉淀常见瓶颈（慢 SQL、连接池、Redis 热点、GC 风暴等），供定位与报告分析参考。
+- 📊 **多源监控接入**：支持 Prometheus 资源 CSV + 慢查询 JSONL，在报告中叠加"资源与吞吐关联曲线"与慢查询 Top，作为交叉验证的第二层证据。
 - 🩺 **执行前预检**：`tools/preflight.py` 自动检查占位 host、占位密钥与环境对齐，避免误压空白环境。
 - 🧼 **敏感数据默认不入库**：`.gitignore` 默认忽略 `data/` 下的真实 txt/json/csv，仓库只保留 `data/examples/` 脱敏示例。
 
