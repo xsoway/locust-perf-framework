@@ -103,3 +103,36 @@ reports/analysis/<场景名>_<测试类型>_<YYYYMMDD_HHMMSS>.json
 - 基准测试报告优先展示：总请求数、失败率、平均响应、P95、P99、吞吐量、最大响应。
 - 负载/压力测试报告优先展示：总请求数、失败率、吞吐量、最高 P95、最高 P99、最大响应、最慢接口。
 - 报告结构必须包含：测试概要、测试类型、测试方案设计、参数设置、测试数据、被测接口信息、指标说明、Locust 统计汇总、结论建议。
+
+## 执行工具
+
+### 阶梯加压（找拐点）`tools/run_step_load.py`
+
+容量/压力测试建议用**阶梯加压找拐点**，而不是一次性打满。逐级升压，TPS 不再随并发增长的那一级即为**性能拐点**；错误率超阈值的那一级为**击穿点**。
+
+```bash
+uv run python -m tools.run_step_load \
+  --locustfile locustfiles/locust_demo_health_baseline.py \
+  --steps "10,30,50,80,100" --step-duration 30s \
+  --scenario demo_health --host https://your-service.example.com
+```
+
+每级独立输出 CSV（`reports/raw/<场景>/<时间戳>/step_<并发>_users/`），末尾打印阶梯汇总表、拐点与击穿点，并把 `step_load_summary.json` 落盘。错误率超过 `--abort-error-threshold`（默认 30%）自动熔断停止后续阶梯。
+
+### 执行前预检（Preflight）`tools/preflight.py`
+
+正式压测前检查常见错误（目标 host 是否为占位符、数据文件是否含占位密钥、环境对齐提醒）：
+
+```bash
+uv run python -m tools.preflight \
+  --host https://your-service.example.com \
+  --data-file data/examples/uploader_authorizations_baseline.json
+```
+
+存在 ERROR 级问题返回码 2 并阻断；WARN/INFO 仅提示。
+
+## 瓶颈分析与复验
+
+- `docs/performance_known_issues.md`：常见性能瓶颈模式库（慢 SQL、连接池耗尽、Redis 热点、GC 风暴、线程池耗尽、压测机自身瓶颈等），供定位与报告分析参考。
+- 报告分析 Agent（`agents/report_analysis_agent.md`）遵循"全链路排查军师"纪律：**证据链、反证法、药方 + 复验方案**。
+- 调优后请用**相同压力复测**验证（可复用同一批次的并发/时长/数据），避免"没验证就认为修好了"。

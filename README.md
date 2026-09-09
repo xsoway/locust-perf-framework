@@ -10,7 +10,10 @@
 - 🔒 **自动时序命名 / 不覆盖**：每次执行自动生成时间戳目录，目标已存在自动追加序号，杜绝重跑覆盖历史。
 - 🚀 **一体化命令**：面对用户的执行入口封装在 `tools/`，只暴露并发、速率、时长、目标、数据等必要参数。
 - 🧾 **中文 HTML 报告**：解析 Locust CSV + 失败明细，输出含 TPS / RT / 错误率趋势、请求级瓶颈、调用链热图的中文报告。
-- 🤖 **LLM 辅助分析（可选）**：经 `config/ai_apiclient.py`（OpenAI 兼容封装）为报告追加 AI 摘要，密钥走环境变量。
+- 🤖 **LLM 辅助分析（可选）**：经 `config/ai_apiclient.py`（OpenAI 兼容封装）为报告追加 AI 摘要，遵守"证据链 / 反证法 / 药方+复验"的排查纪律，密钥走环境变量。
+- 📈 **阶梯加压找拐点**：`tools/run_step_load.py` 逐级加压并自动判定 TPS 性能拐点与错误率击穿点，支持熔断。
+- 🔍 **瓶颈模式库**：`docs/performance_known_issues.md` 沉淀常见瓶颈（慢 SQL、连接池、Redis 热点、GC 风暴等），供定位与报告分析参考。
+- 🩺 **执行前预检**：`tools/preflight.py` 自动检查占位 host、占位密钥与环境对齐，避免误压空白环境。
 - 🧼 **敏感数据默认不入库**：`.gitignore` 默认忽略 `data/` 下的真实 txt/json/csv，仓库只保留 `data/examples/` 脱敏示例。
 
 ## 📁 目录结构
@@ -82,9 +85,23 @@ uv run python -m tools.report_builder \
   --host "https://example.com" \
   --data-file "data/examples/demo_health_payloads.csv" \
   --api-name "健康检查接口" --method GET --path /health
+
+# 阶梯加压找拐点（容量/压力测试）：
+uv run python -m tools.run_step_load \
+  --locustfile locustfiles/locust_demo_health_baseline.py \
+  --steps "10,30,50,80,100" --step-duration 30s \
+  --scenario demo_health --host https://your-service.example.com
 ```
 
 所有入口都支持 `--host` / `--path` / `--data-file` / `--url-file` 覆盖默认值；如某个环境网络或 LLM 网关不可用，加 `--no-llm-analysis` 跳过 AI 摘要。
+
+**正式压测前建议先做预检**，避免误压占位环境或带占位密钥的数据：
+
+```bash
+uv run python -m tools.preflight \
+  --host https://your-service.example.com \
+  --data-file data/examples/uploader_authorizations_baseline.json
+```
 
 > 只需 Locust 原始产物、不需要二次报告时，也可以直接用底层 `locust` 命令（见各 `tools/run_*.py` 的 help）。
 
