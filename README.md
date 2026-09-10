@@ -148,6 +148,8 @@ LLM 分析名为可选增强：未配置环境不会真正调用；交叉 `--no-
 | **脚本开发 Agent** | [`agents/script_development_agent.md`](agents/script_development_agent.md) | 按方案生成 Locust 脚本、数据文件、运行命令 | 压测方案 → `locustfiles/` + `data/` 产物 |
 | **报告分析 Agent** | [`agents/report_analysis_agent.md`](agents/report_analysis_agent.md) | 多指标证据链归因，输出带优先级与复测方案的中文报告 | 原始产物 → `reports/html/` 决策级报告 |
 
+> 🪄 想直接开聊？[`docs/agent_prompts.md`](docs/agent_prompts.md) 提供**一键全流程 / 分步推进 / 进阶精调**三档可直接复制的提示词模板，填上你的接口信息即可。
+
 ### 典型对话流程
 
 **第一步，告诉规划 Agent 你的目标**（工具会按 `planning_agent.md` 逐项与你确认）：
