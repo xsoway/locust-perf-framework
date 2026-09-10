@@ -67,15 +67,6 @@ LOCUST_TARGET_HOST=https://your-service.example.com uv run locust \
 每个场景都封装为 `uv run python -m tools.xxx ...`，自动创建时间戳目录、生成 Locust 原始产物、失败明细 JSONL 与中文 HTML 报告：
 
 ```bash
-# 图片 URL 压力测试（读取 URL 数据文件，覆盖后自动停止）
-uv run python -m tools.run_image_url_stress \
-  --users 20 --spawn-rate 2 --url-limit 10 \
-  --url-file data/examples/url_sample.txt
-
-# 浏览场景压力测试（desktop / mobile 两种站点模式）
-uv run python -m tools.run_taoche_browse_stress \
-  --users 50 --spawn-rate 5 --run-time 1m --site desktop
-
 # 基准测试：健康检查
 uv run python -m tools.report_builder \
   --scenario demo_health --test-type baseline \
@@ -101,7 +92,7 @@ uv run python -m tools.run_step_load \
 ```bash
 uv run python -m tools.preflight \
   --host https://your-service.example.com \
-  --data-file data/examples/uploader_authorizations_baseline.json
+  --data-file data/examples/demo_health_payloads.csv
 ```
 
 > 只需 Locust 原始产物、不需要二次报告时，也可以直接用底层 `locust` 命令（见各 `tools/run_*.py` 的 help）。

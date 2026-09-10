@@ -126,7 +126,7 @@ uv run python -m tools.run_step_load \
 ```bash
 uv run python -m tools.preflight \
   --host https://your-service.example.com \
-  --data-file data/examples/uploader_authorizations_baseline.json
+  --data-file data/examples/demo_health_payloads.csv
 ```
 
 存在 ERROR 级问题返回码 2 并阻断；WARN/INFO 仅提示。

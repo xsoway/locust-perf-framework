@@ -1,5 +1,0 @@
-https://example.com/demo/image/0001.jpg
-https://example.com/demo/image/0002.jpg
-https://example.com/demo/image/0003.jpg
-# 每行一条完整 URL；本文件为脱敏示例，真实压测 URL 请放 data/ 外的本地文件，
-# 用 --url-file / LOCUST_IMAGE_URL_FILE 指定，避免把生产域名写入仓库。
