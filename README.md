@@ -52,16 +52,23 @@ pip install -e .[dev]
 ### 查看公开示例
 
 仓库 `examples/` 目录存放了**端到端跑通**的脱敏压测示例（含脚本、数据、原始
-产物与中文 HTML 报告成品），适合先看产物再动手复现：
+产物与中文 HTML 报告成品），适合先看产物再动手复现，也方便理解框架的标准流程
+与各类测试类型：
+
+| 示例 | 场景 / 测试类型 | 示范点 | 成品报告 |
+| --- | --- | --- | --- |
+| [`health-check-demo`](examples/health-check-demo/) | 健康检查 · 基准/负载 | 单步基准 + 阶梯加压找拐点 | `report.html` |
+| [`pressure-test-demo`](examples/pressure-test-demo/) | 健康检查 · 压力 | 加压到服务过载，击穿点与熔断判定 | `report.html` |
 
 ```bash
-# 直接打开本地成品报告
+# 直接打开某个示例的成品报告
 open examples/health-check-demo/report.html
+open examples/pressure-test-demo/report.html
 ```
 
-按 [`examples/health-check-demo/README.md`](examples/health-check-demo/README.md)
-里的步骤，可一步步复现「本地 Mock 被测服务 → 预检 → 单步压测 → 阶梯加压找拐点
-→ 中文报告」的完整流程。
+每个示例的 `README.md` 都给出了「启动本地 Mock 被测服务 → 预检 → 压测 →
+生成中文报告」的可一次性复现命令，完整清单见
+[`examples/README.md`](examples/README.md)。
 
 ### 跑通一个示例场景（健康检查）
 
