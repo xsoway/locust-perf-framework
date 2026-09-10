@@ -212,45 +212,86 @@ def parse_locust_stats(stats_csv: Path) -> list[LocustStatsRow]:
 
 
 def parse_failure_details(details_file: Path | None) -> list[FailureDetail]:
-    """解析失败请求明细 JSONL。"""
+    """解析失败请求明细 JSONL。
+
+    健壮性约定：`--failure-details-file` 期望的是本框架生成的失败明细 JSONL
+    （每行一个 JSON 对象）。若传入的文件不是合法的 JSONL（例如误传了
+    Locust 原生的 `*_stats_failures.csv`），本函数**不会抛异常中断报告生成**，
+    而是记录一条 warning 并降级返回空明细，让其余报告照常产出。
+    """
 
     if not details_file or not details_file.exists():
         return []
 
     details: list[FailureDetail] = []
-    with details_file.open("r", encoding="utf-8") as file:
-        for line in file:
-            if not line.strip():
-                continue
-            item = json.loads(line)
-            response = item.get("response", {})
-            error = item.get("error", {})
-            failure_reason = _enhanced_failure_reason(
-                str(item.get("failure_reason", "")),
-                response,
-                error,
+    content = details_file.read_text(encoding="utf-8")
+    # 快检首行：若首条非空行不是合法 JSON，判定为非 JSONL 文件并降级。
+    first_line = next(
+        (ln for ln in content.splitlines() if ln.strip()), ""
+    )
+    if first_line and _is_plain_json_object(first_line) is False:
+        logger.warning(
+            "failure-details-file=%s 不是本框架 failure_details.jsonl 格式"
+            "（每行一个 JSON 对象），已跳过失败明细解析以继续生成报告；"
+            "失败聚合请查看 --stats-csv 对应的 statistics failures。",
+            details_file,
+        )
+        return []
+
+    for line in content.splitlines():
+        if not line.strip():
+            continue
+        try:
+            item_json = json.loads(line)
+        except json.JSONDecodeError:
+            # 单行即便格式异常也不阻断整体生成，仅跳过该行。
+            logger.warning("failure_details 存在无法解析的行，已跳过：%r", line[:120])
+            continue
+        if not isinstance(item_json, dict):
+            continue
+        item: dict[str, object] = item_json
+        response = item.get("response", {})
+        if not isinstance(response, dict):
+            response = {}
+        error = item.get("error", {})
+        if not isinstance(error, dict):
+            error = {}
+        failure_reason = _enhanced_failure_reason(
+            str(item.get("failure_reason", "")),
+            response,
+            error,
+        )
+        details.append(
+            FailureDetail(
+                method=str(item.get("method", "")),
+                interface=str(item.get("interface", "")),
+                url=str(item.get("url", "")),
+                query=dict(item.get("query", {}) if isinstance(item.get("query"), dict) else {}),
+                failure_reason=failure_reason,
+                read_mode=str(item.get("read_mode", "")),
+                client_rt_ms=_to_float(str(item.get("client_rt_ms", 0))),
+                server_rt_ms=_to_optional_float(item.get("server_rt_ms")),
+                body_read_ms=_to_float(str(item.get("body_read_ms", 0))),
+                status_code=response.get("status_code", ""),
+                content_type=str(response.get("content_type", "")),
+                response_x_source=str(response.get("x_source", "")),
+                content_length=_to_int(
+                    str(item.get("content_length", response.get("content_length", 0)))
+                ),
+                body_snippet=str(response.get("body_snippet", "")),
             )
-            details.append(
-                FailureDetail(
-                    method=str(item.get("method", "")),
-                    interface=str(item.get("interface", "")),
-                    url=str(item.get("url", "")),
-                    query=dict(item.get("query", {})),
-                    failure_reason=failure_reason,
-                    read_mode=str(item.get("read_mode", "")),
-                    client_rt_ms=_to_float(str(item.get("client_rt_ms", 0))),
-                    server_rt_ms=_to_optional_float(item.get("server_rt_ms")),
-                    body_read_ms=_to_float(str(item.get("body_read_ms", 0))),
-                    status_code=response.get("status_code", ""),
-                    content_type=str(response.get("content_type", "")),
-                    response_x_source=str(response.get("x_source", "")),
-                    content_length=_to_int(
-                        str(item.get("content_length", response.get("content_length", 0)))
-                    ),
-                    body_snippet=str(response.get("body_snippet", "")),
-                )
-            )
+        )
     return details
+
+
+def _is_plain_json_object(line: str) -> bool:
+    """判断单行是否为合法的 JSON 对象；返回 True/False，不抛异常。"""
+
+    try:
+        value = json.loads(line)
+    except json.JSONDecodeError:
+        return False
+    return isinstance(value, dict)
 
 
 def _enhanced_failure_reason(

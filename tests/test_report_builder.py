@@ -190,6 +190,43 @@ def test_parse_request_log_stats_aggregates_timing_metrics(tmp_path: Path) -> No
     assert stats.read_mode_counts == {"first_chunk": 1, "full": 1}
 
 
+def test_parse_failure_details_tolerates_non_jsonl_csv(tmp_path: Path) -> None:
+    """误传非 JSONL 文件（如 Locust 原生 stats_failures.csv）时不应崩溃，应降级返回空。"""
+
+    csv_file = tmp_path / "stats_failures.csv"
+    csv_file.write_text(
+        "Method,Name,Error,Occurrences,First Seen,Last Seen\n"
+        'GET,GET /health,ConnectionError,10,2026-09-10 09:00:00,2026-09-10 09:01:00\n',
+        encoding="utf-8",
+    )
+
+    details = parse_failure_details(csv_file)
+
+    assert details == []
+
+
+def test_parse_failure_details_tolerates_malformed_lines(tmp_path: Path) -> None:
+    """合法 JSONL 中混入坏行时只跳过坏行，其余正常解析，不应抛异常。"""
+
+    details_file = tmp_path / "failure_details.jsonl"
+    details_file.write_text(
+        '{"method":"GET","interface":"https://example.test/a","url":"https://example.test/a",'
+        '"failure_reason":"ok",'
+        '"response":{"status_code":500}}\n'
+        'this is not valid json\n'
+        '{"method":"GET","interface":"https://example.test/b","url":"https://example.test/b",'
+        '"failure_reason":"also ok",'
+        '"response":{"status_code":503}}\n',
+        encoding="utf-8",
+    )
+
+    details = parse_failure_details(details_file)
+
+    assert len(details) == 2
+    assert details[0].url == "https://example.test/a"
+    assert details[1].url == "https://example.test/b"
+
+
 def test_parse_failure_details_expands_status_zero_error(tmp_path: Path) -> None:
     """旧失败明细中 status=0 时应展示底层连接异常。"""
 
