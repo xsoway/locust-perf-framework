@@ -19,7 +19,7 @@
 
     指定数据文件（覆盖 --site 的默认文件）：
     uv run python -m tools.run_taoche_browse_stress \\
-        --data-file data/taoche_browse_urls.csv
+        --data-file data/examples/taoche_browse_urls.csv
 """
 
 from __future__ import annotations

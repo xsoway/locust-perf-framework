@@ -48,6 +48,28 @@ def test_parse_locust_stats_csv_zero_requests_no_division_error(tmp_path: Path) 
     assert result.error_rate == 0.0
 
 
+def test_parse_locust_stats_csv_supports_new_column_names(tmp_path: Path) -> None:
+    """兼容 Locust 新版本 stats CSV 列名（Request Count / 95% 等）。"""
+
+    stats = tmp_path / "new_stats.csv"
+    stats.write_text(
+        "Type,Name,Request Count,Failure Count,Median Response Time,Average Response Time,"
+        "Min Response Time,Max Response Time,Average Content Size,Requests/s,Failures/s,"
+        "50%,66%,75%,80%,90%,95%,98%,99%,99.9%,99.99%,100%\n"
+        "GET,/health,1000,20,58,60,1,200,28,500,0,58,58,59,59,62,130,240,300,310,320,340\n",
+        encoding="utf-8",
+    )
+
+    result = parse_locust_stats_csv(stats)
+
+    assert result.total_requests == 1000
+    assert result.total_failures == 20
+    assert result.rps == 500
+    assert result.p95_ms == 130
+    assert result.p99_ms == 300
+    assert result.error_rate == 0.02
+
+
 def test_detect_breakdown_point_returns_flat_rps_level() -> None:
     """TPS 不再随并发增长时，返回该拐点并发数。"""
 

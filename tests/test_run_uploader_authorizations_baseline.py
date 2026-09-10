@@ -30,7 +30,7 @@ def test_run_locust_sets_env_and_command(monkeypatch, tmp_path: Path) -> None:
         run_time="1m",
         host="http://example.test",
         path="/file-center-api/open/bucket/uploaderAuthorizations",
-        data_file="data/uploader_authorizations_baseline.json",
+        data_file="data/examples/uploader_authorizations_baseline.json",
     )
 
     return_code = _run_locust(tmp_path, tmp_path / "failure_details.jsonl", args)
@@ -54,7 +54,7 @@ def test_build_context_contains_business_fields() -> None:
         run_time="1m",
         host="http://example.test",
         path="/file-center-api/open/bucket/uploaderAuthorizations",
-        data_file="data/uploader_authorizations_baseline.json",
+        data_file="data/examples/uploader_authorizations_baseline.json",
         scenario="uploader_authorizations",
         test_type="baseline",
         environment="test",
@@ -84,7 +84,7 @@ def test_build_html_report_enables_llm_by_default(monkeypatch, tmp_path: Path) -
         run_time="1m",
         host="http://example.test",
         path="/file-center-api/open/bucket/uploaderAuthorizations",
-        data_file="data/uploader_authorizations_baseline.json",
+        data_file="data/examples/uploader_authorizations_baseline.json",
         scenario="uploader_authorizations",
         test_type="baseline",
         environment="test",
@@ -121,7 +121,7 @@ def test_build_html_report_can_disable_llm(monkeypatch, tmp_path: Path) -> None:
         run_time="1m",
         host="http://example.test",
         path="/file-center-api/open/bucket/uploaderAuthorizations",
-        data_file="data/uploader_authorizations_baseline.json",
+        data_file="data/examples/uploader_authorizations_baseline.json",
         scenario="uploader_authorizations",
         test_type="baseline",
         environment="test",

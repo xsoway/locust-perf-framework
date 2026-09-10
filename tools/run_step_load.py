@@ -69,37 +69,45 @@ def _to_float(value: str) -> float:
 def parse_locust_stats_csv(stats_csv: Path) -> StepResult:
     """解析 Locust `stats_stats.csv` 总览行的核心指标。
 
-    Locust 总览 CSV 列为：
-    Type, Name, # requests, # fails, Median, 90%ile, 95%ile, 99%ile,
-    Average, Min, Max, Average size, Current RPS, Current failures/s.
-    这里取“总请求数、失败数、P95、P99、平均 RT、RPS”关键项；RPS 列名可能为
-    `Current RPS` 或 `Requests/s`，兼容两种。
+    兼容 Locust 新旧两套列名：
+    - 旧版：`# requests`, `# fails`, `Median`, `95%ile`, `99%ile`, `Average`, `Current RPS`
+    - 新版：`Request Count`, `Failure Count`, `Median Response Time`,
+            `95%`, `99%`, `Average Response Time`, `Requests/s`
+    取“总请求数、失败数、P95、P99、平均 RT、RPS”关键项。
     """
 
     with stats_csv.open(encoding="utf-8") as f:
         header = f.readline().strip().split(",")
         data = f.readline().strip().split(",")
+        # 其余行不重要，只要总览第一行数据即可
 
-    def col(name: str) -> str:
+    def col(*names: str) -> str:
+        """按列名逐一匹配（忽略末尾空白），返回首个有值且下标存在的列值。"""
+
         for idx, head in enumerate(header):
-            if head.strip() == name and idx < len(data):
+            head_stripped = head.strip()
+            if head_stripped in names and idx < len(data):
                 return data[idx].strip()
+        # 兼容以数字百分位（如 95%）作为列名的情况
+        for idx, head in enumerate(header):
+            head_stripped = head.strip().lower()
+            for name in names:
+                if head_stripped == name.lower() and idx < len(data):
+                    return data[idx].strip()
         return "0"
 
-    total_requests = int(_to_float(col("# requests")))
-    total_failures = int(_to_float(col("# fails")))
-    rps_value = col("Current RPS")
-    if not rps_value or _to_float(rps_value) == 0:
-        rps_value = col("Requests/s")
+    total_requests = int(_to_float(col("# requests", "Request Count", "requests")))
+    total_failures = int(_to_float(col("# fails", "Failure Count", "failures")))
+    rps_value = col("Current RPS", "Requests/s", "rps")
     return StepResult(
         users=0,  # 由调用方按当前阶梯填充
         total_requests=total_requests,
         total_failures=total_failures,
         error_rate=(total_failures / total_requests) if total_requests else 0.0,
         rps=_to_float(rps_value),
-        p95_ms=_to_float(col("95%ile")),
-        p99_ms=_to_float(col("99%ile")),
-        avg_ms=_to_float(col("Average")),
+        p95_ms=_to_float(col("95%ile", "95%")),
+        p99_ms=_to_float(col("99%ile", "99%")),
+        avg_ms=_to_float(col("Average", "Average Response Time", "avg")),
     )
 
 

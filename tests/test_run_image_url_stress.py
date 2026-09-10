@@ -47,7 +47,7 @@ def test_run_locust_returns_nonzero_without_raising(
     args = argparse.Namespace(
         users=100,
         spawn_rate=5,
-        url_file="data/01-url.txt",
+        url_file="data/examples/url_sample.txt",
         url_limit=2000,
         max_time="",
         transport="requests",

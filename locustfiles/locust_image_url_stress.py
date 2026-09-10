@@ -1062,7 +1062,7 @@ from tools.logging_setup import get_logger
 
 runtime_config = load_runtime_config()
 
-DEFAULT_URL_FILE = Path("data/26-url.txt")
+DEFAULT_URL_FILE = Path("data/examples/url_sample.txt")
 
 IMAGE_MAGIC_HEADERS = (
     b"\xff\xd8\xff",
