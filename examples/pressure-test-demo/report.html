@@ -1,0 +1,1115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>demo_health 性能测试报告</title>
+  <style>
+    :root {
+      --paper: #F2EDE2;
+      --paper-warm: #ECE5D5;
+      --paper-soft: #F7F3EA;
+      --ink: #1B1810;
+      --ink-soft: #3A352B;
+      --ink-muted: #6B6256;
+      --rule: #C5BDA8;
+      --rule-faint: #DDD5C0;
+      --crit: #B73225;
+      --crit-bg: rgba(183, 50, 37, 0.10);
+      --warn: #BD7A18;
+      --warn-bg: rgba(189, 122, 24, 0.12);
+      --ok: #3F6B43;
+      --ok-bg: rgba(63, 107, 67, 0.12);
+      --mixed: #5C5B3F;
+    }
+    * { box-sizing: border-box; }
+    html, body { background: var(--paper); }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 14.5px;
+      line-height: 1.65;
+      color: var(--ink);
+      font-feature-settings: "tnum" 1;
+    }
+    main { width: min(1180px, calc(100vw - 40px)); margin: 0 auto; padding: 36px 0 48px; }
+    .masthead { border-top: 3px solid var(--ink); border-bottom: 1px solid var(--rule); padding: 22px 0 20px; margin-bottom: 24px; }
+    .eyebrow, .section-kicker, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 0.04em; }
+    .eyebrow { color: var(--ink-muted); font-size: 11px; text-transform: uppercase; }
+    h1, h2, h3 { font-family: Georgia, "Times New Roman", "Songti SC", serif; font-weight: 500; color: var(--ink); margin: 0; }
+    h1 { font-size: clamp(32px, 5vw, 56px); line-height: 1.05; margin-top: 10px; letter-spacing: 0; }
+    h2 { font-size: 24px; line-height: 1.25; margin-bottom: 14px; }
+    .meta-line { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 18px; color: var(--ink-soft); }
+    .stamp { display: inline-block; border: 1px solid var(--rule); background: var(--paper-warm); padding: 2px 8px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; color: var(--ink-soft); }
+    .section { border-top: 2px solid var(--ink); padding-top: 18px; margin-top: 30px; }
+    .section-kicker { color: var(--ink-muted); font-size: 11px; margin-bottom: 6px; }
+    .ledger-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); }
+    .ledger-cell { min-height: 96px; padding: 14px 16px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); background: rgba(247, 243, 234, 0.55); }
+    .ledger-label { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ink-muted); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; }
+    .ledger-value { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 24px; line-height: 1.2; margin-top: 9px; color: var(--ink); word-break: break-word; }
+    .ledger-note { color: var(--ink-muted); font-size: 12px; margin-top: 6px; }
+    .badge { display: inline-block; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.10em; padding: 4px 10px 5px; border: 1px solid transparent; }
+    .badge-pass { background: var(--ok); color: var(--paper); }
+    .badge-fail { background: var(--crit); color: var(--paper); }
+    .badge-warn { background: var(--warn); color: var(--paper); }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0 18px; border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); background: rgba(247, 243, 234, 0.52); }
+    th, td { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: 9px 10px; vertical-align: top; text-align: left; }
+    th { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; letter-spacing: 0.04em; color: var(--ink-soft); background: var(--paper-warm); }
+    td.num, th.num { text-align: right; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: nowrap; }
+    tr.ok-row td { background: var(--ok-bg); }
+    tr.warn-row td { background: var(--warn-bg); }
+    tr.fail-row td { background: var(--crit-bg); }
+    .two-col { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+    .pane { position: relative; border: 1px solid var(--rule); background: var(--paper-soft); padding: 18px 18px 16px; }
+    .pane::before { content: attr(data-label); position: absolute; top: -10px; left: 12px; background: var(--paper); padding: 0 8px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 10px; color: var(--ink-muted); letter-spacing: 0.08em; }
+    .callout { border: 1px solid var(--rule); border-left: 4px solid var(--mixed); background: var(--paper-soft); padding: 14px 16px; margin: 12px 0; }
+    .callout.ok { border-left-color: var(--ok); }
+    .callout.warn { border-left-color: var(--warn); }
+    .callout.fail { border-left-color: var(--crit); }
+    .explain-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 20px; margin: 0; padding: 0; list-style: none; }
+    .explain-list li { border-bottom: 1px dashed var(--rule-faint); padding-bottom: 8px; }
+    .metric-name { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ink); font-weight: 700; }
+    .muted { color: var(--ink-muted); font-size: 12px; }
+    .interpret-panel { margin-top: 18px; border: 1px solid var(--rule); background: var(--paper-soft); padding: 16px; }
+    .interpret-panel h3 { font-size: 18px; margin-bottom: 12px; }
+    .interpret-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .interpret-card { border: 1px solid var(--rule-faint); background: var(--paper); padding: 12px; min-height: 120px; }
+    .interpret-name { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: var(--ink-soft); }
+    .interpret-value { font-size: 22px; font-weight: 800; margin: 6px 0; color: var(--ink); }
+    .interpret-card p { font-size: 12px; color: var(--ink-muted); margin: 0; }
+    .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 12px 0 10px; }
+    .metric-card { position: relative; min-height: 150px; border: 1px solid var(--rule); border-top: 3px solid var(--mixed); background: linear-gradient(180deg, rgba(247, 243, 234, 0.96), rgba(236, 229, 213, 0.54)); padding: 14px 14px 13px; }
+    .metric-card::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 44px; border-bottom: 1px dashed var(--rule-faint); }
+    .metric-card-label { display: block; min-height: 34px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; color: var(--ink-soft); overflow-wrap: anywhere; }
+    .metric-card strong { display: block; margin: 10px 0 18px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: clamp(20px, 2.4vw, 30px); line-height: 1.05; color: var(--ink); overflow-wrap: anywhere; }
+    .metric-card small { display: block; color: var(--ink-muted); font-size: 12px; line-height: 1.45; }
+    .metric-card:nth-child(1) { border-top-color: var(--crit); }
+    .metric-card:nth-child(2) { border-top-color: var(--ok); }
+    .metric-card:nth-child(3) { border-top-color: var(--warn); }
+    .metric-card:nth-child(4) { border-top-color: var(--mixed); }
+    .metric-card:nth-child(5) { border-top-color: var(--crit); }
+    .metric-card:nth-child(6) { border-top-color: var(--ok); }
+    .read-mode-strip { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid var(--rule); background: var(--paper-soft); padding: 10px 12px; margin: 0 0 18px; }
+    .read-mode-strip > span { flex: 0 0 auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; font-weight: 700; color: var(--ink-soft); letter-spacing: 0.04em; }
+    .read-mode-strip > div { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; min-width: 0; }
+    .read-mode-pill { display: inline-flex; align-items: baseline; gap: 8px; border: 1px solid var(--rule-faint); background: var(--paper); padding: 4px 8px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; color: var(--ink-muted); }
+    .read-mode-pill strong { color: var(--ink); font-size: 11px; }
+    .chart-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+    .chart-box { border: 1px solid var(--rule); background: var(--paper-soft); padding: 16px; min-height: 220px; }
+    .chart-box h3 { font-size: 18px; margin-bottom: 12px; }
+    .chart-row { display: grid; grid-template-columns: 118px minmax(80px, 1fr) 64px; align-items: center; gap: 8px; margin: 10px 0; }
+    .chart-label, .chart-value { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; color: var(--ink-soft); }
+    .chart-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chart-value { text-align: right; }
+    .chart-track { height: 16px; border: 1px solid var(--rule); background: var(--paper-warm); overflow: hidden; }
+    .chart-track span { display: block; height: 100%; max-width: 100%; background: var(--crit); }
+    .trend-svg { width: 100%; height: 150px; }
+    .trend-svg line { stroke: var(--rule); stroke-width: 1; }
+    .trend-svg polyline { fill: none; stroke: var(--crit); stroke-width: 3; }
+    .trend-dot { fill: var(--paper-soft); stroke: var(--crit); stroke-width: 2; pointer-events: none; }
+    .trend-dot-hit { fill: transparent; stroke: transparent; cursor: crosshair; pointer-events: all; }
+    .trend-point:hover .trend-dot { fill: var(--crit); r: 4.5; }
+    .trend-tooltip { display: none; pointer-events: none; }
+    .trend-tooltip rect { fill: var(--paper); stroke: var(--ink); stroke-width: 1; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.18)); }
+    .trend-tooltip text { fill: var(--ink); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 9px; }
+    .trend-point:hover .trend-tooltip { display: block; }
+    .topology, .heatmap { display: grid; gap: 10px; align-items: stretch; margin: 12px 0; }
+    .topology { grid-template-columns: 1fr 32px 1fr 32px 1.4fr; }
+    .top-node, .heat-cell { border: 1px solid var(--rule); background: var(--paper-soft); padding: 16px; min-height: 82px; }
+    .top-node span, .heat-cell span { display: block; margin-top: 6px; color: var(--ink-muted); font-size: 12px; }
+    .top-node.hot, .heat-cell.hot { border-left: 5px solid var(--crit); background: var(--crit-bg); }
+    .top-node.ok, .heat-cell.cool { border-left: 5px solid var(--ok); background: var(--ok-bg); }
+    .heat-cell.warm { border-left: 5px solid var(--warn); background: var(--warn-bg); }
+    .top-arrow { display: grid; place-items: center; color: var(--ink-muted); font-size: 22px; }
+    .heatmap { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .empty-chart { color: var(--ink-muted); font-size: 12px; padding: 24px 0; }
+    .details-table { table-layout: fixed; min-width: 780px; }
+    .details-table th:nth-child(1), .details-table td:nth-child(1) { width: 48px; }
+    .details-table th:nth-child(2), .details-table td:nth-child(2) { width: 70px; }
+    .details-table th:nth-child(3), .details-table td:nth-child(3) { width: 26%; }
+    .details-table th:nth-child(4), .details-table td:nth-child(4) { width: 110px; }
+    .details-table th:nth-child(5), .details-table td:nth-child(5) { width: 32%; }
+    .details-table th:nth-child(6), .details-table td:nth-child(6) { width: 24%; }
+    .details-wrap { width: 100%; overflow-x: auto; border-left: 1px solid var(--rule); border-right: 1px solid var(--rule); }
+    .url-cell, .reason-cell, pre, code, .break-token, .break-cell { overflow-wrap: anywhere; word-break: break-word; white-space: normal; }
+    .report-collapse { border: 1px solid var(--rule); background: var(--paper-soft); margin: 12px 0 18px; }
+    .report-collapse > summary { cursor: pointer; padding: 10px 14px; background: var(--paper-warm); color: var(--ink-soft); border-bottom: 1px solid var(--rule); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; letter-spacing: 0.04em; }
+    .report-collapse:not([open]) > summary { border-bottom: 0; }
+    .report-collapse .callout { margin: 14px; }
+    .report-collapse .details-wrap { border-left: 0; border-right: 0; }
+    .report-collapse > .llm-box { border: 0; }
+    .inline-detail summary, .body-detail summary { cursor: pointer; color: var(--crit); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; }
+    .inline-detail code { display: block; margin-top: 6px; border: 1px solid var(--rule-faint); background: rgba(236, 229, 213, 0.7); padding: 5px; }
+    .body-detail pre { margin-top: 8px; }
+    pre { margin: 0; max-height: 180px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; white-space: pre-wrap; }
+    .llm-box { border: 1px solid var(--rule); background: var(--paper-soft); padding: 0; overflow: hidden; }
+    .llm-box h3 { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 16px; font-weight: 700; margin: 0; padding: 12px 16px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule-faint); background: var(--paper-warm); }
+    .llm-box h3:first-child { border-top: 0; }
+    .llm-box p { margin: 0; padding: 10px 16px; border-bottom: 1px dashed var(--rule-faint); }
+    .llm-box ul { margin: 0; padding: 10px 20px 12px 34px; border-bottom: 1px dashed var(--rule-faint); }
+    .llm-box li { margin: 6px 0; }
+    .llm-box strong { color: var(--crit); }
+    .llm-box code { display: inline; border: 1px solid var(--rule-faint); background: rgba(236, 229, 213, 0.72); padding: 1px 4px; }
+    .footer { margin-top: 34px; border-top: 1px solid var(--rule); padding-top: 12px; color: var(--ink-muted); font-size: 12px; }
+    @media (max-width: 980px) {
+      main { width: min(100vw - 24px, 1180px); }
+      .ledger-grid, .two-col, .explain-list, .chart-grid, .interpret-grid, .metric-grid, .topology, .heatmap { grid-template-columns: 1fr; }
+      .read-mode-strip { align-items: flex-start; flex-direction: column; }
+      .read-mode-strip > div { justify-content: flex-start; }
+      .top-arrow { display: none; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header class="masthead">
+    <div class="eyebrow">LOCUST PERFORMANCE LEDGER · 中文压测报告</div>
+    <h1>demo_health 性能测试报告</h1>
+    <div class="meta-line">
+      <span class="stamp">报告编号：LOCUST-REPORT</span>
+      <span class="stamp">生成时间：2026-09-10 09:16:49</span>
+      <span class="stamp">执行环境：demo(local mock 127.0.0.1:8099, 多线程限流)</span>
+      <span class="stamp">测试类型：pressure</span>
+      <span class="stamp">结论：需修复</span>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="section-kicker">01 · 测试概览</div>
+    <h2>时间、环境、工具版本</h2>
+    <div class="ledger-grid">
+        <div class="ledger-cell">
+          <div class="ledger-label">总请求数</div>
+          <div class="ledger-value">7372</div>
+          <div class="ledger-note">压测样本量</div>
+        </div>
+        
+
+        <div class="ledger-cell">
+          <div class="ledger-label">失败率</div>
+          <div class="ledger-value">76.00%</div>
+          <div class="ledger-note">稳定性和容量判断核心指标</div>
+        </div>
+        
+
+        <div class="ledger-cell">
+          <div class="ledger-label">吞吐量</div>
+          <div class="ledger-value">1052</div>
+          <div class="ledger-note">Requests/s 汇总</div>
+        </div>
+        
+
+        <div class="ledger-cell">
+          <div class="ledger-label">最高 P95</div>
+          <div class="ledger-value">29.0 ms</div>
+          <div class="ledger-note">压力下慢接口观察</div>
+        </div>
+        
+
+        <div class="ledger-cell">
+          <div class="ledger-label">最高 P99</div>
+          <div class="ledger-value">38.0 ms</div>
+          <div class="ledger-note">尾延迟风险</div>
+        </div>
+        
+
+        <div class="ledger-cell">
+          <div class="ledger-label">最大响应</div>
+          <div class="ledger-value">82.8 ms</div>
+          <div class="ledger-note">极端响应耗时</div>
+        </div>
+        
+
+        <div class="ledger-cell">
+          <div class="ledger-label">最慢接口</div>
+          <div class="ledger-value">GET GET /health</div>
+          <div class="ledger-note">按 P95 排序</div>
+        </div>
+        
+
+        <div class="ledger-cell">
+          <div class="ledger-label">状态章</div>
+          <div class="ledger-value"><span class="badge badge-fail">需修复</span></div>
+          <div class="ledger-note">失败率 76.00%，优先排查失败请求。</div>
+        </div>
+        </div>
+    <table>
+      <tbody>
+        <tr><th>报告生成时间</th><td>2026-09-10 09:16:49</td><th>执行环境</th><td>demo(local mock 127.0.0.1:8099, 多线程限流)</td></tr>
+        <tr><th>压测工具</th><td>Locust 2.44.4</td><th>Python</th><td>3.13.13</td></tr>
+        <tr><th>数据文件</th><td class="mono">-</td><th>执行人</th><td>QA</td></tr>
+      </tbody>
+    </table>
+    <div class="callout fail">
+      <strong>本次判定：</strong>失败率 76.00%，优先排查失败请求。
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-kicker">02 · 测试方案</div>
+    <h2>测试目标与执行方案</h2>
+    <div class="two-col">
+      <div class="pane" data-label="测试概要">
+        <table><tbody>
+          <tr><th>场景名称</th><td>demo_health</td></tr>
+          <tr><th>测试类型</th><td>pressure</td></tr>
+          <tr><th>测试概要</th><td>健康检查接口压力测试：逐步加压直到服务出现过载（被测服务活跃并发上限 20）。</td></tr>
+          <tr><th>执行人</th><td>QA</td></tr>
+        </tbody></table>
+      </div>
+      <div class="pane" data-label="测试方案设计">
+        <table><tbody>
+          <tr><th>方案说明</th><td>并发阶梯 5/10/20/40，每级 8 秒；本报告展示击穿档（40 并发，错误率 76%）。</td></tr>
+          <tr><th>成功判定</th><td>失败率=0，P95&lt;300ms</td></tr>
+          <tr><th>观察指标</th><td>吞吐量、失败率、P95/P99、最大响应、最慢接口</td></tr>
+          <tr><th>补充统计</th><td>阶梯结论：5→133rps,10→265rps,20→551rps 均 0 失败；40→1052rps 错误率 76%。击穿点=并发40（错误率超5%），已触发熔断终止。容量上限约为 20 并发(551rps)。</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-kicker">03 · 指标总览与趋势</div>
+    <h2>TPS、RT、错误率趋势</h2>
+    
+    <div class="chart-grid">
+      
+    <div class="chart-box">
+      <h3>TPS / RPS 趋势</h3>
+      <svg class="trend-svg" viewBox="0 0 400 150" role="img" aria-label="TPS / RPS 趋势">
+        <line x1="20" y1="130" x2="380" y2="130"></line>
+        <line x1="20" y1="10" x2="20" y2="130"></line>
+        <polyline points="0.0,120.0 72.0,120.0 144.0,120.0 216.0,63.3 288.0,37.5 360.0,0.0" transform="translate(20 10)"></polyline>
+        <g transform="translate(20 10)">
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="0.0" cy="120.0" r="8">
+                <title>TPS / RPS 趋势
+时间: 1789002990
+并发用户: 0
+当前值: 0.00 req/s
+累计请求: 0
+累计失败: 0</title>
+              </circle>
+              <circle class="trend-dot" cx="0.0" cy="120.0" r="3">
+                <title>TPS / RPS 趋势
+时间: 1789002990
+并发用户: 0
+当前值: 0.00 req/s
+累计请求: 0
+累计失败: 0</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="10.0" y="2.0" width="148" height="110" rx="4"></rect>
+                <text x="18.0" y="12.0"><tspan x="18.0" dy="12">时间: 1789002990</tspan>
+<tspan x="18.0" dy="12">当前值: 0.00 req/s</tspan>
+<tspan x="18.0" dy="12">并发用户: 0</tspan>
+<tspan x="18.0" dy="12">RPS: 0.00 req/s</tspan>
+<tspan x="18.0" dy="12">P95: 0.00 ms</tspan>
+<tspan x="18.0" dy="12">平均RT: 0.00 ms</tspan>
+<tspan x="18.0" dy="12">失败/s: 0.00</tspan>
+<tspan x="18.0" dy="12">累计: 0 / 失败 0</tspan></text>
+              </g>
+            </g>
+            
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="72.0" cy="120.0" r="8">
+                <title>TPS / RPS 趋势
+时间: 1789002991
+并发用户: 8
+当前值: 0.00 req/s
+累计请求: 292
+累计失败: 0</title>
+              </circle>
+              <circle class="trend-dot" cx="72.0" cy="120.0" r="3">
+                <title>TPS / RPS 趋势
+时间: 1789002991
+并发用户: 8
+当前值: 0.00 req/s
+累计请求: 292
+累计失败: 0</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="82.0" y="2.0" width="148" height="110" rx="4"></rect>
+                <text x="90.0" y="12.0"><tspan x="90.0" dy="12">时间: 1789002991</tspan>
+<tspan x="90.0" dy="12">当前值: 0.00 req/s</tspan>
+<tspan x="90.0" dy="12">并发用户: 8</tspan>
+<tspan x="90.0" dy="12">RPS: 0.00 req/s</tspan>
+<tspan x="90.0" dy="12">P95: 30.0 ms</tspan>
+<tspan x="90.0" dy="12">平均RT: 26.6 ms</tspan>
+<tspan x="90.0" dy="12">失败/s: 0.00</tspan>
+<tspan x="90.0" dy="12">累计: 292 / 失败 0</tspan></text>
+              </g>
+            </g>
+            
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="144.0" cy="120.0" r="8">
+                <title>TPS / RPS 趋势
+时间: 1789002992
+并发用户: 16
+当前值: 0.00 req/s
+累计请求: 817
+累计失败: 0</title>
+              </circle>
+              <circle class="trend-dot" cx="144.0" cy="120.0" r="3">
+                <title>TPS / RPS 趋势
+时间: 1789002992
+并发用户: 16
+当前值: 0.00 req/s
+累计请求: 817
+累计失败: 0</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="154.0" y="2.0" width="148" height="110" rx="4"></rect>
+                <text x="162.0" y="12.0"><tspan x="162.0" dy="12">时间: 1789002992</tspan>
+<tspan x="162.0" dy="12">当前值: 0.00 req/s</tspan>
+<tspan x="162.0" dy="12">并发用户: 16</tspan>
+<tspan x="162.0" dy="12">RPS: 0.00 req/s</tspan>
+<tspan x="162.0" dy="12">P95: 41.0 ms</tspan>
+<tspan x="162.0" dy="12">平均RT: 28.1 ms</tspan>
+<tspan x="162.0" dy="12">失败/s: 0.00</tspan>
+<tspan x="162.0" dy="12">累计: 817 / 失败 0</tspan></text>
+              </g>
+            </g>
+            
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="216.0" cy="63.3" r="8">
+                <title>TPS / RPS 趋势
+时间: 1789002993
+并发用户: 24
+当前值: 252 req/s
+累计请求: 1724
+累计失败: 471</title>
+              </circle>
+              <circle class="trend-dot" cx="216.0" cy="63.3" r="3">
+                <title>TPS / RPS 趋势
+时间: 1789002993
+并发用户: 24
+当前值: 252 req/s
+累计请求: 1724
+累计失败: 471</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="212.0" y="10.0" width="148" height="110" rx="4"></rect>
+                <text x="220.0" y="20.0"><tspan x="220.0" dy="12">时间: 1789002993</tspan>
+<tspan x="220.0" dy="12">当前值: 252 req/s</tspan>
+<tspan x="220.0" dy="12">并发用户: 24</tspan>
+<tspan x="220.0" dy="12">RPS: 252 req/s</tspan>
+<tspan x="220.0" dy="12">P95: 36.0 ms</tspan>
+<tspan x="220.0" dy="12">平均RT: 26.8 ms</tspan>
+<tspan x="220.0" dy="12">失败/s: 0.00</tspan>
+<tspan x="220.0" dy="12">累计: 1724 / 失败 471</tspan></text>
+              </g>
+            </g>
+            
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="288.0" cy="37.5" r="8">
+                <title>TPS / RPS 趋势
+时间: 1789002994
+并发用户: 32
+当前值: 366 req/s
+累计请求: 2908
+累计失败: 1455</title>
+              </circle>
+              <circle class="trend-dot" cx="288.0" cy="37.5" r="3">
+                <title>TPS / RPS 趋势
+时间: 1789002994
+并发用户: 32
+当前值: 366 req/s
+累计请求: 2908
+累计失败: 1455</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="212.0" y="10.0" width="148" height="110" rx="4"></rect>
+                <text x="220.0" y="20.0"><tspan x="220.0" dy="12">时间: 1789002994</tspan>
+<tspan x="220.0" dy="12">当前值: 366 req/s</tspan>
+<tspan x="220.0" dy="12">并发用户: 32</tspan>
+<tspan x="220.0" dy="12">RPS: 366 req/s</tspan>
+<tspan x="220.0" dy="12">P95: 31.0 ms</tspan>
+<tspan x="220.0" dy="12">平均RT: 26.4 ms</tspan>
+<tspan x="220.0" dy="12">失败/s: 0.00</tspan>
+<tspan x="220.0" dy="12">累计: 2908 / 失败 1455</tspan></text>
+              </g>
+            </g>
+            
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="360.0" cy="0.0" r="8">
+                <title>TPS / RPS 趋势
+时间: 1789002995
+并发用户: 40
+当前值: 533 req/s
+累计请求: 4336
+累计失败: 2698</title>
+              </circle>
+              <circle class="trend-dot" cx="360.0" cy="0.0" r="3">
+                <title>TPS / RPS 趋势
+时间: 1789002995
+并发用户: 40
+当前值: 533 req/s
+累计请求: 4336
+累计失败: 2698</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="212.0" y="10.0" width="148" height="110" rx="4"></rect>
+                <text x="220.0" y="20.0"><tspan x="220.0" dy="12">时间: 1789002995</tspan>
+<tspan x="220.0" dy="12">当前值: 533 req/s</tspan>
+<tspan x="220.0" dy="12">并发用户: 40</tspan>
+<tspan x="220.0" dy="12">RPS: 533 req/s</tspan>
+<tspan x="220.0" dy="12">P95: 31.0 ms</tspan>
+<tspan x="220.0" dy="12">平均RT: 26.5 ms</tspan>
+<tspan x="220.0" dy="12">失败/s: 138</tspan>
+<tspan x="220.0" dy="12">累计: 4336 / 失败 2698</tspan></text>
+              </g>
+            </g>
+            </g>
+      </svg>
+      <div class="muted">最新值：533 req/s</div>
+    </div>
+    
+      
+    <div class="chart-box">
+      <h3>RT P95 趋势</h3>
+      <svg class="trend-svg" viewBox="0 0 400 150" role="img" aria-label="RT P95 趋势">
+        <line x1="20" y1="130" x2="380" y2="130"></line>
+        <line x1="20" y1="10" x2="20" y2="130"></line>
+        <polyline points="0.0,120.0 72.0,32.2 144.0,0.0 216.0,14.6 288.0,29.3 360.0,29.3" transform="translate(20 10)"></polyline>
+        <g transform="translate(20 10)">
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="0.0" cy="120.0" r="8">
+                <title>RT P95 趋势
+时间: 1789002990
+并发用户: 0
+当前值: 0.00 ms
+累计请求: 0
+累计失败: 0</title>
+              </circle>
+              <circle class="trend-dot" cx="0.0" cy="120.0" r="3">
+                <title>RT P95 趋势
+时间: 1789002990
+并发用户: 0
+当前值: 0.00 ms
+累计请求: 0
+累计失败: 0</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="10.0" y="2.0" width="148" height="110" rx="4"></rect>
+                <text x="18.0" y="12.0"><tspan x="18.0" dy="12">时间: 1789002990</tspan>
+<tspan x="18.0" dy="12">当前值: 0.00 ms</tspan>
+<tspan x="18.0" dy="12">并发用户: 0</tspan>
+<tspan x="18.0" dy="12">RPS: 0.00 req/s</tspan>
+<tspan x="18.0" dy="12">P95: 0.00 ms</tspan>
+<tspan x="18.0" dy="12">平均RT: 0.00 ms</tspan>
+<tspan x="18.0" dy="12">失败/s: 0.00</tspan>
+<tspan x="18.0" dy="12">累计: 0 / 失败 0</tspan></text>
+              </g>
+            </g>
+            
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="72.0" cy="32.2" r="8">
+                <title>RT P95 趋势
+时间: 1789002991
+并发用户: 8
+当前值: 30.0 ms
+累计请求: 292
+累计失败: 0</title>
+              </circle>
+              <circle class="trend-dot" cx="72.0" cy="32.2" r="3">
+                <title>RT P95 趋势
+时间: 1789002991
+并发用户: 8
+当前值: 30.0 ms
+累计请求: 292
+累计失败: 0</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="82.0" y="10.0" width="148" height="110" rx="4"></rect>
+                <text x="90.0" y="20.0"><tspan x="90.0" dy="12">时间: 1789002991</tspan>
+<tspan x="90.0" dy="12">当前值: 30.0 ms</tspan>
+<tspan x="90.0" dy="12">并发用户: 8</tspan>
+<tspan x="90.0" dy="12">RPS: 0.00 req/s</tspan>
+<tspan x="90.0" dy="12">P95: 30.0 ms</tspan>
+<tspan x="90.0" dy="12">平均RT: 26.6 ms</tspan>
+<tspan x="90.0" dy="12">失败/s: 0.00</tspan>
+<tspan x="90.0" dy="12">累计: 292 / 失败 0</tspan></text>
+              </g>
+            </g>
+            
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="144.0" cy="0.0" r="8">
+                <title>RT P95 趋势
+时间: 1789002992
+并发用户: 16
+当前值: 41.0 ms
+累计请求: 817
+累计失败: 0</title>
+              </circle>
+              <circle class="trend-dot" cx="144.0" cy="0.0" r="3">
+                <title>RT P95 趋势
+时间: 1789002992
+并发用户: 16
+当前值: 41.0 ms
+累计请求: 817
+累计失败: 0</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="154.0" y="10.0" width="148" height="110" rx="4"></rect>
+                <text x="162.0" y="20.0"><tspan x="162.0" dy="12">时间: 1789002992</tspan>
+<tspan x="162.0" dy="12">当前值: 41.0 ms</tspan>
+<tspan x="162.0" dy="12">并发用户: 16</tspan>
+<tspan x="162.0" dy="12">RPS: 0.00 req/s</tspan>
+<tspan x="162.0" dy="12">P95: 41.0 ms</tspan>
+<tspan x="162.0" dy="12">平均RT: 28.1 ms</tspan>
+<tspan x="162.0" dy="12">失败/s: 0.00</tspan>
+<tspan x="162.0" dy="12">累计: 817 / 失败 0</tspan></text>
+              </g>
+            </g>
+            
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="216.0" cy="14.6" r="8">
+                <title>RT P95 趋势
+时间: 1789002993
+并发用户: 24
+当前值: 36.0 ms
+累计请求: 1724
+累计失败: 471</title>
+              </circle>
+              <circle class="trend-dot" cx="216.0" cy="14.6" r="3">
+                <title>RT P95 趋势
+时间: 1789002993
+并发用户: 24
+当前值: 36.0 ms
+累计请求: 1724
+累计失败: 471</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="212.0" y="10.0" width="148" height="110" rx="4"></rect>
+                <text x="220.0" y="20.0"><tspan x="220.0" dy="12">时间: 1789002993</tspan>
+<tspan x="220.0" dy="12">当前值: 36.0 ms</tspan>
+<tspan x="220.0" dy="12">并发用户: 24</tspan>
+<tspan x="220.0" dy="12">RPS: 252 req/s</tspan>
+<tspan x="220.0" dy="12">P95: 36.0 ms</tspan>
+<tspan x="220.0" dy="12">平均RT: 26.8 ms</tspan>
+<tspan x="220.0" dy="12">失败/s: 0.00</tspan>
+<tspan x="220.0" dy="12">累计: 1724 / 失败 471</tspan></text>
+              </g>
+            </g>
+            
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="288.0" cy="29.3" r="8">
+                <title>RT P95 趋势
+时间: 1789002994
+并发用户: 32
+当前值: 31.0 ms
+累计请求: 2908
+累计失败: 1455</title>
+              </circle>
+              <circle class="trend-dot" cx="288.0" cy="29.3" r="3">
+                <title>RT P95 趋势
+时间: 1789002994
+并发用户: 32
+当前值: 31.0 ms
+累计请求: 2908
+累计失败: 1455</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="212.0" y="10.0" width="148" height="110" rx="4"></rect>
+                <text x="220.0" y="20.0"><tspan x="220.0" dy="12">时间: 1789002994</tspan>
+<tspan x="220.0" dy="12">当前值: 31.0 ms</tspan>
+<tspan x="220.0" dy="12">并发用户: 32</tspan>
+<tspan x="220.0" dy="12">RPS: 366 req/s</tspan>
+<tspan x="220.0" dy="12">P95: 31.0 ms</tspan>
+<tspan x="220.0" dy="12">平均RT: 26.4 ms</tspan>
+<tspan x="220.0" dy="12">失败/s: 0.00</tspan>
+<tspan x="220.0" dy="12">累计: 2908 / 失败 1455</tspan></text>
+              </g>
+            </g>
+            
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="360.0" cy="29.3" r="8">
+                <title>RT P95 趋势
+时间: 1789002995
+并发用户: 40
+当前值: 31.0 ms
+累计请求: 4336
+累计失败: 2698</title>
+              </circle>
+              <circle class="trend-dot" cx="360.0" cy="29.3" r="3">
+                <title>RT P95 趋势
+时间: 1789002995
+并发用户: 40
+当前值: 31.0 ms
+累计请求: 4336
+累计失败: 2698</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="212.0" y="10.0" width="148" height="110" rx="4"></rect>
+                <text x="220.0" y="20.0"><tspan x="220.0" dy="12">时间: 1789002995</tspan>
+<tspan x="220.0" dy="12">当前值: 31.0 ms</tspan>
+<tspan x="220.0" dy="12">并发用户: 40</tspan>
+<tspan x="220.0" dy="12">RPS: 533 req/s</tspan>
+<tspan x="220.0" dy="12">P95: 31.0 ms</tspan>
+<tspan x="220.0" dy="12">平均RT: 26.5 ms</tspan>
+<tspan x="220.0" dy="12">失败/s: 138</tspan>
+<tspan x="220.0" dy="12">累计: 4336 / 失败 2698</tspan></text>
+              </g>
+            </g>
+            </g>
+      </svg>
+      <div class="muted">最新值：31.0 ms</div>
+    </div>
+    
+      
+    <div class="chart-box">
+      <h3>错误率趋势</h3>
+      <svg class="trend-svg" viewBox="0 0 400 150" role="img" aria-label="错误率趋势">
+        <line x1="20" y1="130" x2="380" y2="130"></line>
+        <line x1="20" y1="10" x2="20" y2="130"></line>
+        <polyline points="0.0,120.0 72.0,120.0 144.0,120.0 216.0,67.3 288.0,23.5 360.0,0.0" transform="translate(20 10)"></polyline>
+        <g transform="translate(20 10)">
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="0.0" cy="120.0" r="8">
+                <title>错误率趋势
+时间: 1789002990
+并发用户: 0
+当前值: 0.00 %
+累计请求: 0
+累计失败: 0</title>
+              </circle>
+              <circle class="trend-dot" cx="0.0" cy="120.0" r="3">
+                <title>错误率趋势
+时间: 1789002990
+并发用户: 0
+当前值: 0.00 %
+累计请求: 0
+累计失败: 0</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="10.0" y="2.0" width="148" height="110" rx="4"></rect>
+                <text x="18.0" y="12.0"><tspan x="18.0" dy="12">时间: 1789002990</tspan>
+<tspan x="18.0" dy="12">当前值: 0.00 %</tspan>
+<tspan x="18.0" dy="12">并发用户: 0</tspan>
+<tspan x="18.0" dy="12">RPS: 0.00 req/s</tspan>
+<tspan x="18.0" dy="12">P95: 0.00 ms</tspan>
+<tspan x="18.0" dy="12">平均RT: 0.00 ms</tspan>
+<tspan x="18.0" dy="12">失败/s: 0.00</tspan>
+<tspan x="18.0" dy="12">累计: 0 / 失败 0</tspan></text>
+              </g>
+            </g>
+            
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="72.0" cy="120.0" r="8">
+                <title>错误率趋势
+时间: 1789002991
+并发用户: 8
+当前值: 0.00 %
+累计请求: 292
+累计失败: 0</title>
+              </circle>
+              <circle class="trend-dot" cx="72.0" cy="120.0" r="3">
+                <title>错误率趋势
+时间: 1789002991
+并发用户: 8
+当前值: 0.00 %
+累计请求: 292
+累计失败: 0</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="82.0" y="2.0" width="148" height="110" rx="4"></rect>
+                <text x="90.0" y="12.0"><tspan x="90.0" dy="12">时间: 1789002991</tspan>
+<tspan x="90.0" dy="12">当前值: 0.00 %</tspan>
+<tspan x="90.0" dy="12">并发用户: 8</tspan>
+<tspan x="90.0" dy="12">RPS: 0.00 req/s</tspan>
+<tspan x="90.0" dy="12">P95: 30.0 ms</tspan>
+<tspan x="90.0" dy="12">平均RT: 26.6 ms</tspan>
+<tspan x="90.0" dy="12">失败/s: 0.00</tspan>
+<tspan x="90.0" dy="12">累计: 292 / 失败 0</tspan></text>
+              </g>
+            </g>
+            
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="144.0" cy="120.0" r="8">
+                <title>错误率趋势
+时间: 1789002992
+并发用户: 16
+当前值: 0.00 %
+累计请求: 817
+累计失败: 0</title>
+              </circle>
+              <circle class="trend-dot" cx="144.0" cy="120.0" r="3">
+                <title>错误率趋势
+时间: 1789002992
+并发用户: 16
+当前值: 0.00 %
+累计请求: 817
+累计失败: 0</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="154.0" y="2.0" width="148" height="110" rx="4"></rect>
+                <text x="162.0" y="12.0"><tspan x="162.0" dy="12">时间: 1789002992</tspan>
+<tspan x="162.0" dy="12">当前值: 0.00 %</tspan>
+<tspan x="162.0" dy="12">并发用户: 16</tspan>
+<tspan x="162.0" dy="12">RPS: 0.00 req/s</tspan>
+<tspan x="162.0" dy="12">P95: 41.0 ms</tspan>
+<tspan x="162.0" dy="12">平均RT: 28.1 ms</tspan>
+<tspan x="162.0" dy="12">失败/s: 0.00</tspan>
+<tspan x="162.0" dy="12">累计: 817 / 失败 0</tspan></text>
+              </g>
+            </g>
+            
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="216.0" cy="67.3" r="8">
+                <title>错误率趋势
+时间: 1789002993
+并发用户: 24
+当前值: 27.3 %
+累计请求: 1724
+累计失败: 471</title>
+              </circle>
+              <circle class="trend-dot" cx="216.0" cy="67.3" r="3">
+                <title>错误率趋势
+时间: 1789002993
+并发用户: 24
+当前值: 27.3 %
+累计请求: 1724
+累计失败: 471</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="212.0" y="10.0" width="148" height="110" rx="4"></rect>
+                <text x="220.0" y="20.0"><tspan x="220.0" dy="12">时间: 1789002993</tspan>
+<tspan x="220.0" dy="12">当前值: 27.3 %</tspan>
+<tspan x="220.0" dy="12">并发用户: 24</tspan>
+<tspan x="220.0" dy="12">RPS: 27.3 req/s</tspan>
+<tspan x="220.0" dy="12">P95: 36.0 ms</tspan>
+<tspan x="220.0" dy="12">平均RT: 26.8 ms</tspan>
+<tspan x="220.0" dy="12">失败/s: 0.00</tspan>
+<tspan x="220.0" dy="12">累计: 1724 / 失败 471</tspan></text>
+              </g>
+            </g>
+            
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="288.0" cy="23.5" r="8">
+                <title>错误率趋势
+时间: 1789002994
+并发用户: 32
+当前值: 50.0 %
+累计请求: 2908
+累计失败: 1455</title>
+              </circle>
+              <circle class="trend-dot" cx="288.0" cy="23.5" r="3">
+                <title>错误率趋势
+时间: 1789002994
+并发用户: 32
+当前值: 50.0 %
+累计请求: 2908
+累计失败: 1455</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="212.0" y="10.0" width="148" height="110" rx="4"></rect>
+                <text x="220.0" y="20.0"><tspan x="220.0" dy="12">时间: 1789002994</tspan>
+<tspan x="220.0" dy="12">当前值: 50.0 %</tspan>
+<tspan x="220.0" dy="12">并发用户: 32</tspan>
+<tspan x="220.0" dy="12">RPS: 50.0 req/s</tspan>
+<tspan x="220.0" dy="12">P95: 31.0 ms</tspan>
+<tspan x="220.0" dy="12">平均RT: 26.4 ms</tspan>
+<tspan x="220.0" dy="12">失败/s: 0.00</tspan>
+<tspan x="220.0" dy="12">累计: 2908 / 失败 1455</tspan></text>
+              </g>
+            </g>
+            
+            <g class="trend-point">
+              <circle class="trend-dot-hit" cx="360.0" cy="0.0" r="8">
+                <title>错误率趋势
+时间: 1789002995
+并发用户: 40
+当前值: 62.2 %
+累计请求: 4336
+累计失败: 2698</title>
+              </circle>
+              <circle class="trend-dot" cx="360.0" cy="0.0" r="3">
+                <title>错误率趋势
+时间: 1789002995
+并发用户: 40
+当前值: 62.2 %
+累计请求: 4336
+累计失败: 2698</title>
+              </circle>
+              <g class="trend-tooltip" transform="translate(0 0)">
+                <rect x="212.0" y="10.0" width="148" height="110" rx="4"></rect>
+                <text x="220.0" y="20.0"><tspan x="220.0" dy="12">时间: 1789002995</tspan>
+<tspan x="220.0" dy="12">当前值: 62.2 %</tspan>
+<tspan x="220.0" dy="12">并发用户: 40</tspan>
+<tspan x="220.0" dy="12">RPS: 62.2 req/s</tspan>
+<tspan x="220.0" dy="12">P95: 31.0 ms</tspan>
+<tspan x="220.0" dy="12">平均RT: 26.5 ms</tspan>
+<tspan x="220.0" dy="12">失败/s: 138</tspan>
+<tspan x="220.0" dy="12">累计: 4336 / 失败 2698</tspan></text>
+              </g>
+            </g>
+            </g>
+      </svg>
+      <div class="muted">最新值：62.2 %</div>
+    </div>
+    
+    </div>
+    <div class="callout warn">
+      <strong>CPU 利用率关联：</strong>当前执行产物未包含 CPU/内存/网络资源监控数据，
+      暂无法绘制 TPS 与 CPU 利用率关联曲线。建议后续接入 Prometheus、系统监控 CSV 或压测机采样日志。
+    </div>
+    
+    
+    <div class="interpret-panel">
+      <h3>关键指标怎么读</h3>
+      <div class="interpret-grid">
+        <div class="interpret-card">
+          <div class="interpret-name">Median(P50 RT)</div>
+          <div class="interpret-value">26.0 ms</div>
+          <p>表示 50% 的请求响应时间小于等于 26.0 ms；也就是一半用户在这个时间内拿到响应。</p>
+        </div>
+        
+
+        <div class="interpret-card">
+          <div class="interpret-name">req/s 吞吐量</div>
+          <div class="interpret-value">1052 req/s</div>
+          <p>表示系统平均每秒处理 1052 个请求；值越高，单位时间处理能力越强。</p>
+        </div>
+        
+
+        <div class="interpret-card">
+          <div class="interpret-name">P95</div>
+          <div class="interpret-value">29.0 ms</div>
+          <p>表示 95% 的请求响应时间小于等于 29.0 ms；约 5% 的请求会更慢。</p>
+        </div>
+        
+
+        <div class="interpret-card">
+          <div class="interpret-name">P99</div>
+          <div class="interpret-value">38.0 ms</div>
+          <p>表示 99% 的请求响应时间小于等于 38.0 ms；用于观察最慢 1% 请求的尾部延迟。</p>
+        </div>
+        </div>
+      <div class="callout warn"><strong>综合解读：</strong>P50、P95、P99 梯度相对平稳，当前批次下整体响应时间分布较集中；吞吐量约 1052 req/s。 尾部延迟差值约 12.0 ms。</div>
+    </div>
+    
+    <h2>请求级耗时拆分</h2>
+    <div class="callout warn"><strong>请求级耗时拆分缺失：</strong>当前报告未读取到 request_details.jsonl，无法展示 client/server/body 指标。</div>
+  </section>
+
+  <section class="section">
+    <div class="section-kicker">04 · 参数设置与测试数据</div>
+    <h2>运行参数</h2>
+    <div class="two-col">
+      <div class="pane" data-label="Locust 参数">
+        <table><tbody>
+          <tr><th>并发用户数</th><td class="mono">40</td></tr>
+          <tr><th>启动速率</th><td class="mono">10 user/s</td></tr>
+          <tr><th>压测时长</th><td class="mono">每级 8s</td></tr>
+          <tr><th>执行环境</th><td>demo(local mock 127.0.0.1:8099, 多线程限流)</td></tr>
+        </tbody></table>
+      </div>
+      <div class="pane" data-label="测试数据">
+        <table><tbody>
+          <tr><th>数据文件</th><td class="mono">-</td></tr>
+          <tr><th>数据说明</th><td>测试数据独立存放，报告仅记录路径和用途，不展示敏感内容。</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-kicker">05 · 被测接口信息</div>
+    <h2>接口范围</h2>
+    <div class="pane" data-label="接口信息">
+      <table><tbody>
+        <tr><th>接口名称</th><td>健康检查接口</td></tr>
+        <tr><th>请求方法</th><td class="mono">GET</td></tr>
+        <tr><th>目标域名</th><td class="mono">http://127.0.0.1:8099</td></tr>
+        <tr><th>请求路径</th><td class="mono">/health</td></tr>
+      </tbody></table>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-kicker">06 · 指标说明</div>
+    <h2>pressure 关注指标</h2>
+    <ul class="explain-list"><li><span class="metric-name">吞吐量</span>：负载/压力测试中观察系统在目标并发下的处理能力。</li>
+<li><span class="metric-name">失败率</span>：判断系统是否进入不可接受状态的核心指标。</li>
+<li><span class="metric-name">P95/P99</span>：观察高并发下用户体验是否显著劣化。</li>
+<li><span class="metric-name">最大响应</span>：定位极端慢请求或阻塞点，不能单独作为通过/失败依据。</li></ul>
+  </section>
+
+  <section class="section">
+    <div class="section-kicker">07 · 可视化展示</div>
+    <h2>趋势图、瓶颈高亮图、调用链热图</h2>
+    <div class="chart-grid">
+    <div class="chart-box">
+      <h3>请求结果分布</h3>
+      
+            <div class="chart-row">
+              <div class="chart-label" title="请求成功">请求成功</div>
+              <div class="chart-track"><span style="width:126px"></span></div>
+              <div class="chart-value">1769</div>
+            </div>
+            
+            <div class="chart-row">
+              <div class="chart-label" title="请求失败">请求失败</div>
+              <div class="chart-track"><span style="width:400px"></span></div>
+              <div class="chart-value">5603</div>
+            </div>
+            
+    </div>
+    
+    <div class="chart-box">
+      <h3>响应时间分位</h3>
+      
+            <div class="chart-row">
+              <div class="chart-label" title="平均响应">平均响应</div>
+              <div class="chart-track"><span style="width:125px"></span></div>
+              <div class="chart-value">26.1 ms</div>
+            </div>
+            
+            <div class="chart-row">
+              <div class="chart-label" title="最高 P95">最高 P95</div>
+              <div class="chart-track"><span style="width:140px"></span></div>
+              <div class="chart-value">29.0 ms</div>
+            </div>
+            
+            <div class="chart-row">
+              <div class="chart-label" title="最高 P99">最高 P99</div>
+              <div class="chart-track"><span style="width:183px"></span></div>
+              <div class="chart-value">38.0 ms</div>
+            </div>
+            
+            <div class="chart-row">
+              <div class="chart-label" title="最大响应">最大响应</div>
+              <div class="chart-track"><span style="width:400px"></span></div>
+              <div class="chart-value">82.8 ms</div>
+            </div>
+            
+    </div>
+    <div class="empty-chart">暂无图表数据</div></div>
+    <h2>瓶颈高亮图</h2>
+    
+    <div class="topology">
+      <div class="top-node ok">Locust 压测客户端<br><span>40 并发 / 10 user/s 启动</span></div>
+      <div class="top-arrow">→</div>
+      <div class="top-node ok">健康检查接口<br><span>GET /health</span></div>
+      <div class="top-arrow">→</div>
+      <div class="top-node hot">目标服务<br><span>http://127.0.0.1:8099 · 失败率 76.00% · P95 29.0 ms</span></div>
+    </div>
+    
+    <h2>请求级调用链热图</h2>
+    
+    <div class="heatmap">
+      <div class="heat-cell cool">请求分配<br><span>7372 次</span></div>
+      <div class="heat-cell hot">GET 请求<br><span>健康检查接口</span></div>
+      <div class="heat-cell hot">响应耗时<br><span>P95 29.0 ms</span></div>
+      <div class="heat-cell warm">失败明细<br><span>0 条</span></div>
+    </div>
+    
+    <p class="muted">当前数据粒度为请求级，未接入应用 APM/函数追踪，因此无法标明具体耗时函数；后续可接入 TraceId、APM span 或服务端调用链日志。</p>
+    
+  </section>
+
+  <section class="section">
+    <div class="section-kicker">08 · 瓶颈分析</div>
+    <h2>问题点、影响程度、关联指标</h2>
+    
+    <table>
+      <thead><tr><th>问题点</th><th>影响程度</th><th>关联指标</th><th>判断依据</th></tr></thead>
+      <tbody>
+        <tr class="fail-row">
+          <td>健康检查接口 请求链路</td>
+          <td>高</td>
+          <td>失败率 76.00%；P95 29.0 ms；最大响应 82.8 ms</td>
+          <td>暂无失败明细</td>
+        </tr>
+        <tr class="warn-row">
+          <td>服务端与下游依赖</td>
+          <td>待确认</td>
+          <td>需要服务端日志、资源监控、网络指标、下游依赖耗时；目标域名 http://127.0.0.1:8099</td>
+          <td>当前报告只有客户端侧 Locust 指标，不能单独确认服务端瓶颈归属，可结合 LLM 分析中的排查方向继续定位。</td>
+        </tr>
+      </tbody>
+    </table>
+    
+  </section>
+
+  <section class="section">
+    <div class="section-kicker">09 · 原因定位</div>
+    <h2>详细指标与日志分析</h2>
+    <div class="callout warn">暂无失败明细，无法展开日志级原因定位。</div>
+  </section>
+
+  <section class="section">
+    <div class="section-kicker">10 · Locust 统计汇总</div>
+    <h2>接口明细</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>方法</th><th>接口</th><th class="num">请求数</th><th class="num">失败数</th><th class="num">失败率</th>
+          <th class="num">平均(ms)</th><th class="num">P95(ms)</th><th class="num">P99(ms)</th><th class="num">RPS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="fail-row">
+          <td>GET</td>
+          <td>GET /health</td>
+          <td class="num">7372</td>
+          <td class="num">5603</td>
+          <td class="num">76.00%</td>
+          <td class="num">26.1</td>
+          <td class="num">29.0</td>
+          <td class="num">38.0</td>
+          <td class="num">1052</td>
+        </tr>
+        </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <div class="section-kicker">11 · 报错明细</div>
+    <h2>失败请求：接口、入参、返回</h2>
+    <details class="report-collapse">
+      <summary>展开/收起报错明细（默认收起，最多展示前 80 条）</summary>
+      <div class="callout warn"><strong>暂无失败明细：</strong>当前报告未读取到 failure_details.jsonl。历史批次如未开启明细采集，只能查看 Locust failures CSV 中的聚合错误。</div>
+    </details>
+  </section>
+
+  <section class="section">
+    <div class="section-kicker">12 · LLM 辅助分析</div>
+    <h2>AI 分析总结</h2>
+    <details class="report-collapse" open>
+      <summary>展开/收起 AI 分析总结（默认展开）</summary>
+      <div class="callout warn"><strong>未启用 LLM 分析：</strong>本报告仅展示 Locust 原始指标、图表和失败明细。</div>
+    </details>
+  </section>
+
+  <section class="section">
+    <div class="section-kicker">13 · 优化建议与优先级</div>
+    <h2>优化建议</h2>
+    <div class="callout fail">
+      <strong>需修复：</strong>失败率 76.00%，优先排查失败请求。
+    </div>
+    
+    <table>
+      <thead><tr><th>优先级</th><th>建议</th><th>触发依据</th></tr></thead>
+      <tbody>
+        <tr class="fail-row"><td>P0</td><td>优先补充失败明细采集，再进行问题归因。</td><td>失败率 76.00%；失败明细 0 条。</td></tr>
+        <tr class="warn-row"><td>P1</td><td>接入服务端日志、网关日志、下游依赖耗时、CPU/内存/网络指标，用于区分客户端压力、服务端处理和依赖瓶颈。</td><td>当前报告缺少资源监控与服务端链路数据。</td></tr>
+        <tr class="ok-row"><td>P2</td><td>按 50/100/200 并发阶梯重跑，形成容量曲线和历史对比基线。</td><td>当前单批次不足以判断容量拐点。</td></tr>
+      </tbody>
+    </table>
+    
+  </section>
+
+  
+
+  <section class="section">
+    <div class="section-kicker">14 · 历史对比</div>
+    <h2>历史基线对比</h2>
+    <div class="callout warn"><strong>历史对比未启用：</strong>当前报告未传入历史基线批次。使用方式：执行报告生成命令时增加 <code>--baseline-stats-csv reports/raw/image_url/&lt;历史批次&gt;/stats_stats.csv</code>，即可对比总请求数、失败率、平均响应、P95/P99、RPS 和最大响应。</div>
+  </section>
+
+  <div class="footer">模板版本：v1.1 · 风格：台账风 Ledger Style · 生成方式：tools.report_builder · 数据来源：Locust stats CSV</div>
+</main>
+</body>
+</html>

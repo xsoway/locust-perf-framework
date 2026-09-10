@@ -1,0 +1,53 @@
+{
+  "scenario": "demo_health_pressure",
+  "locustfile": "examples/pressure-test-demo/locust_health_stress.py",
+  "host": "http://127.0.0.1:8099",
+  "breakdown_point": null,
+  "breakout_point": 40,
+  "notes": [
+    "阶梯 40 错误率 76.00% 超过熔断阈值 30%，已提前终止。",
+    "击穿点：并发 40 时错误率超过 5%。"
+  ],
+  "steps": [
+    {
+      "users": 5,
+      "total_requests": 932,
+      "total_failures": 0,
+      "error_rate": 0.0,
+      "rps": 132.87034288686962,
+      "p95_ms": 32.0,
+      "p99_ms": 43.0,
+      "avg_ms": 26.317325723394973
+    },
+    {
+      "users": 10,
+      "total_requests": 1860,
+      "total_failures": 0,
+      "error_rate": 0.0,
+      "rps": 265.16890357524005,
+      "p95_ms": 31.0,
+      "p99_ms": 43.0,
+      "avg_ms": 26.219437203126876
+    },
+    {
+      "users": 20,
+      "total_requests": 3861,
+      "total_failures": 0,
+      "error_rate": 0.0,
+      "rps": 551.397108215657,
+      "p95_ms": 28.0,
+      "p99_ms": 30.0,
+      "avg_ms": 25.25979082240871
+    },
+    {
+      "users": 40,
+      "total_requests": 7372,
+      "total_failures": 5603,
+      "error_rate": 0.7600379815518177,
+      "rps": 1052.3729722475698,
+      "p95_ms": 29.0,
+      "p99_ms": 38.0,
+      "avg_ms": 26.085184021293557
+    }
+  ]
+}

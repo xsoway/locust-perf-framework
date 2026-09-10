@@ -1,0 +1,2 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+GET,GET /health,CatchResponseError('server error status=503'),5603,2026-09-10T01:16:32Z,2026-09-10T01:16:37Z
