@@ -1,0 +1,52 @@
+{
+  "scenario": "demo_health",
+  "locustfile": "locustfiles/locust_demo_health_baseline.py",
+  "host": "http://127.0.0.1:8099",
+  "breakdown_point": null,
+  "breakout_point": null,
+  "notes": [
+    "未检测到明确拐点/击穿，可能尚未达到系统的容量上限，建议继续加压。"
+  ],
+  "steps": [
+    {
+      "users": 5,
+      "total_requests": 21,
+      "total_failures": 0,
+      "error_rate": 0.0,
+      "rps": 2.3600257747558673,
+      "p95_ms": 28.0,
+      "p99_ms": 28.0,
+      "avg_ms": 26.094761857252923
+    },
+    {
+      "users": 10,
+      "total_requests": 40,
+      "total_failures": 0,
+      "error_rate": 0.0,
+      "rps": 4.466757324760706,
+      "p95_ms": 52.0,
+      "p99_ms": 52.0,
+      "avg_ms": 31.09245619889407
+    },
+    {
+      "users": 20,
+      "total_requests": 78,
+      "total_failures": 0,
+      "error_rate": 0.0,
+      "rps": 8.79221768350031,
+      "p95_ms": 100.0,
+      "p99_ms": 120.0,
+      "avg_ms": 40.774746333063845
+    },
+    {
+      "users": 40,
+      "total_requests": 157,
+      "total_failures": 0,
+      "error_rate": 0.0,
+      "rps": 17.459595255369084,
+      "p95_ms": 180.0,
+      "p99_ms": 200.0,
+      "avg_ms": 58.94371604550241
+    }
+  ]
+}

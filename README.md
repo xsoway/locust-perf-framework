@@ -30,6 +30,7 @@
 ├── data/
 │   └── examples/             # 脱敏示例数据（脚本默认指向）
 ├── docs/                     # 工作流与报告设计
+├── examples/                 # 可公开的端到端压测示例（含报告成品）
 ├── locustfiles/              # Locust 压测脚本
 ├── logs/                     # 框架运行日志（不入库）
 ├── reports/                  # raw/ 原始产物、html/ 中文报告、analysis/ 中间产物
@@ -47,6 +48,20 @@ uv sync --extra dev
 # 或用 pip:
 pip install -e .[dev]
 ```
+
+### 查看公开示例
+
+仓库 `examples/` 目录存放了**端到端跑通**的脱敏压测示例（含脚本、数据、原始
+产物与中文 HTML 报告成品），适合先看产物再动手复现：
+
+```bash
+# 直接打开本地成品报告
+open examples/health-check-demo/report.html
+```
+
+按 [`examples/health-check-demo/README.md`](examples/health-check-demo/README.md)
+里的步骤，可一步步复现「本地 Mock 被测服务 → 预检 → 单步压测 → 阶梯加压找拐点
+→ 中文报告」的完整流程。
 
 ### 跑通一个示例场景（健康检查）
 
