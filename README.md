@@ -215,6 +215,11 @@ uv run ruff check .
 2. **不提交真实业务数据与密钥**；新数据请放 `data/examples/` 或本地生成。
 3. 新功能/脚本请附带 `tests/` 自包含用例并保证 `ruff check` 通过。
 
+## 🏷️ 版本与变更
+
+版本遵循 Semantic Versioning，详见 [CHANGELOG.md](CHANGELOG.md)。每次发布会在
+GitHub Releases 提供带变更说明的发版。
+
 ## 📄 License
 
 [MIT](LICENSE)
